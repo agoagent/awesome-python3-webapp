@@ -26,8 +26,6 @@ async def create_pool(loop, **kw):
     global __pool
     # 使用这些基本参数来创建连接池
     # await 和 async 是联动的（异步IO）
-
-    # 异步创建mysql池
     __pool = await aiomysql.create_pool(
         host=kw.get('host', 'localhost'),
         port=kw.get('port', 53306),
@@ -41,14 +39,14 @@ async def create_pool(loop, **kw):
         loop=loop
     )
 
-# 协程async
 async def select(sql, args, size=None):
     log(sql, args)
     global __pool
     # with-as: 可以方便我们执行一些清理工作，如 close 和 exit：
     # https://www.jianshu.com/p/c00df845323c
 
-    #协程await  代替yield from功能
+    # 这里的 await 很多，可能看不懂什么意思，我暂时把它理解为：
+    # 可以让它后面执行的语句等一会，防止多个程序同时执行，达到异步效果
     with (await __pool) as conn:
         # cursor 叫游标，conn没懂，应该也是个‘池’
         # 'aiomysql.DictCursor'看似复杂，但它仅仅是要求返回字典格式
@@ -141,7 +139,7 @@ class ModelMetaclass(type):
         for k in mappings.keys():
             # pop ：如果 key 存在于字典中则将其移除并返回其值，否则返回 default 
             attrs.pop(k)
-        # lambda : 把输入数据转化为带引号的字符串 : 1 ->`1`
+        # 这个 lambda 看不懂呀
         escaped_fields = list(map(lambda f: '`%s`' % f, fields))
         attrs['__mappings__'] = mappings # 保存属性和列的映射关系
         attrs['__table__'] = tableName # table 名
@@ -180,7 +178,6 @@ class Model(dict, metaclass=ModelMetaclass):
             field = self.__mappings__[key]
             if field.default is not None:
                 # 如果 field.default 不是 None ： 就把它赋值给 value
-                # callable(field.default): True-> field.default()  False -> field.default
                 value = field.default() if callable(field.default) else field.default
                 logging.debug('using default value for %s: %s' % (key,str(value)))
                 setattr(self, key, value)
